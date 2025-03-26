@@ -1,0 +1,20 @@
+# Set any rules.mk overrides for your specific keymap here.
+# See rules at https://docs.qmk.fm/#/config_options?id=the-rulesmk-file
+CONSOLE_ENABLE = no 
+COMMAND_ENABLE = no
+COMBO_ENABLE = yes
+MOUSEKEY_ENABLE = yes 
+MIDI_ENABLE = no
+EXTRAKEY_ENABLE = yes 
+KEYBOARD_SHARED_EP = yes
+ORYX_ENABLE = yes
+RGB_MATRIX_CUSTOM_KB = yes
+TAP_DANCE_ENABLE = yes
+SPACE_CADET_ENABLE = no
+CAPS_WORD_ENABLE = yes
+REPEAT_KEY_ENABLE = yes
+# AUTOCORRECT_ENABLE = yes
+DYNAMIC_MACRO_ENABLE = yes
+NKRO_ENABLE = yes
+SRC += features/achordion.c
+STENO_ENABLE = yes
