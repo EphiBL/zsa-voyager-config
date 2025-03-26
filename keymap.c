@@ -126,22 +126,10 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //                                                   OSL(1),       OSM(MOD_LSFT),                                     MT(MOD_MEH, KC_ENTER), LT(5, KC_SPACE)
 };
 
-const char PROGMEM simple_code_to_char[128] = {
-   [KC_A] = 'a', [KC_B] = 'b', [KC_C] = 'c', [KC_D] = 'd',
-   [KC_E] = 'e', [KC_F] = 'f', [KC_G] = 'g', [KC_H] = 'h',
-   [KC_I] = 'i', [KC_J] = 'j', [KC_K] = 'k', [KC_L] = 'l',
-   [KC_M] = 'm', [KC_N] = 'n', [KC_O] = 'o', [KC_P] = 'p',
-   [KC_Q] = 'q', [KC_R] = 'r', [KC_S] = 's', [KC_T] = 't',
-   [KC_U] = 'u', [KC_V] = 'v', [KC_W] = 'w', [KC_X] = 'x',
-   [KC_Y] = 'y', [KC_Z] = 'z',
-   [KC_1] = '1', [KC_2] = '2', [KC_3] = '3', [KC_4] = '4',
-   [KC_5] = '5', [KC_6] = '6', [KC_7] = '7', [KC_8] = '8',
-   [KC_9] = '9', [KC_0] = '0',
-   [KC_NUBS] = '\\', [KC_SCLN] = ';',
-   [KC_QUOTE] = '\'', [KC_GRAVE] = '`',
-   [KC_COMMA] = ',', [KC_DOT] = '.', [KC_SLASH] = '/',
-   [KC_SPACE] = ' ', [KC_ENTER] = '\n',
-};
+
+//################################################################################################################################
+// Combos, Macros, and Custom Keycodes
+//################################################################################################################################
 
 enum combo_events {
   SW_STENO,
@@ -153,55 +141,6 @@ combo_t key_combos[] = {
     [SW_STENO] = COMBO_ACTION(sw_steno),
 };
 
-extern rgb_config_t rgb_matrix_config;
-
-void keyboard_post_init_user(void) {
-  rgb_matrix_enable();
-}
-
-const uint8_t PROGMEM ledmap[][RGB_MATRIX_LED_COUNT][3] = {
-    [0] = { {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233} },
-};
-
-void set_layer_color(int layer) {
-  for (int i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
-    HSV hsv = {
-      .h = pgm_read_byte(&ledmap[layer][i][0]),
-      .s = pgm_read_byte(&ledmap[layer][i][1]),
-      .v = pgm_read_byte(&ledmap[layer][i][2]),
-    };
-    if (!hsv.h && !hsv.s && !hsv.v) {
-        rgb_matrix_set_color( i, 0, 0, 0 );
-    } else {
-        RGB rgb = hsv_to_rgb( hsv );
-        float f = (float)rgb_matrix_config.hsv.v / UINT8_MAX;
-        rgb_matrix_set_color( i, f * rgb.r, f * rgb.g, f * rgb.b );
-    }
-  }
-}
-
-bool rgb_matrix_indicators_user(void) {
-  if (keyboard_config.disable_layer_led) { return false; }
-  switch (biton32(layer_state)) {
-    case 0:
-      set_layer_color(0);
-      break;
-    case 1:
-      rgb_matrix_set_color_all(58, 113, 60);
-      break;
-    case 6:
-      rgb_matrix_set_color_all(58, 113, 60);
-      break;
-    case 7:
-      rgb_matrix_set_color_all(58, 113, 60);
-      break;
-   default:
-    if (rgb_matrix_get_flags() == LED_FLAG_NONE)
-      rgb_matrix_set_color_all(0, 0, 0);
-    break;
-  }
-  return true;
-}
 
 void matrix_scan_user(void) {
   achordion_task();
@@ -350,17 +289,6 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
       return false;
   }
 
-  // if (record->event.pressed) {
-  //   keypress_buffer[buffer_index] = keycode;
-  //   buffer_index = (buffer_index + 1) % BUFFER_SIZE;
-
-  //   char c = pgm_read_byte(&simple_code_to_char[keycode & 0xFF]);
-  //   if (c != 0) {
-  //     char_buffer[char_buffer_index] = c;
-  //     char_buffer_index = (char_buffer_index + 1) % BUFFER_SIZE;
-  //   }
-  // }
-
   // Process magic AFTER the AREP_SYM case
   // if (!process_record_magic(keycode, record)) {
   //   return false;
@@ -397,6 +325,65 @@ uint16_t get_alt_repeat_key_keycode_user(uint16_t keycode, uint8_t mods) {
     return KC_TRNS;
 }
 
+
+//################################################################################################################################
+// RGB Matrix
+//################################################################################################################################
+
+extern rgb_config_t rgb_matrix_config;
+
+void keyboard_post_init_user(void) {
+  rgb_matrix_enable();
+}
+
+const uint8_t PROGMEM ledmap[][RGB_MATRIX_LED_COUNT][3] = {
+    [0] = { {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233}, {74,180,233} },
+};
+
+void set_layer_color(int layer) {
+  for (int i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
+    HSV hsv = {
+      .h = pgm_read_byte(&ledmap[layer][i][0]),
+      .s = pgm_read_byte(&ledmap[layer][i][1]),
+      .v = pgm_read_byte(&ledmap[layer][i][2]),
+    };
+    if (!hsv.h && !hsv.s && !hsv.v) {
+        rgb_matrix_set_color( i, 0, 0, 0 );
+    } else {
+        RGB rgb = hsv_to_rgb( hsv );
+        float f = (float)rgb_matrix_config.hsv.v / UINT8_MAX;
+        rgb_matrix_set_color( i, f * rgb.r, f * rgb.g, f * rgb.b );
+    }
+  }
+}
+
+bool rgb_matrix_indicators_user(void) {
+  if (keyboard_config.disable_layer_led) { return false; }
+  switch (biton32(layer_state)) {
+    case 0:
+      set_layer_color(0);
+      break;
+    case 1:
+      rgb_matrix_set_color_all(58, 113, 60);
+      break;
+    case 6:
+      rgb_matrix_set_color_all(58, 113, 60);
+      break;
+    case 7:
+      rgb_matrix_set_color_all(58, 113, 60);
+      break;
+   default:
+    if (rgb_matrix_get_flags() == LED_FLAG_NONE)
+      rgb_matrix_set_color_all(0, 0, 0);
+    break;
+  }
+  return true;
+}
+
+
+//################################################################################################################################
+// Tap Dance, I don't really use the feature but I'm leaving this here for future reference
+//################################################################################################################################
 
 typedef struct {
     bool is_press_action;
