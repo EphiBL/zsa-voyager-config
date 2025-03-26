@@ -43,7 +43,7 @@ enum tap_dance_codes {
   DANCE_0,
 };
 
-const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] =
+const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
   // Main Keyboard
   [0] = LAYOUT_voyager(
@@ -117,15 +117,6 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] =
   //                                                                           STN_A,       STN_O,              STN_E,   STN_U
   // ),
 
-  // Old Graphite
-  // [7] = LAYOUT_voyager(
-  //   KC_ESCAPE,      SCRNSHT,     KC_DEL,      KC_PC_COPY,     KC_PC_PASTE,      TG(4),                                          KC_UNDO,     LCTL(KC_Y),          SM_FILL,          TG(7),   SCRNSHT,     KC_ENTER,
-  //   KC_LEFT_GUI,    KC_B,           KC_L,           KC_D,           KC_W,         KC_Z,                                           KC_SCLN,           KC_F,           KC_O,           KC_U,          KC_J,     TG(6),
-  //   KC_TAB,         LT(2, KC_N),MT(MOD_LALT,KC_R),MT(MOD_LCTL, KC_T), MT(MOD_LSFT,KC_S),  KC_G,                                   KC_Y,           MT(MOD_LSFT,KC_H),MT(MOD_LCTL,KC_A),MT(MOD_LALT,KC_E),      KC_I,  KC_BSPC,
-  //   KC_LEFT_SHIFT,  LT(3,KC_Q),  KC_X,               KC_M,        KC_C,           KC_V,                                           KC_K,           KC_P,           KC_COMMA,    KC_DOT,      KC_SLASH, CW_TOGG,
-  //                                                   OSL(1),       OSM(MOD_LSFT),                                     MT(MOD_MEH, KC_ENTER), LT(5,KC_SPACE)
-  // ),
-
   // Full QWERTY
   //   [7] = LAYOUT_voyager(
   //   KC_ESCAPE,      SCRNSHT,     KC_DEL,      KC_PC_COPY,     KC_PC_PASTE,      TG(4),                                          KC_UNDO,     LCTL(KC_Y),          KC_DEL,          TG(7),   SCRNSHT,     TG(7),
@@ -152,31 +143,14 @@ const char PROGMEM simple_code_to_char[128] = {
    [KC_SPACE] = ' ', [KC_ENTER] = '\n',
 };
 
-static uint16_t keypress_buffer[BUFFER_SIZE];
-static uint8_t buffer_index = 0;
-static char char_buffer[BUFFER_SIZE];
-static uint8_t char_buffer_index;
-
 enum combo_events {
-  KC_BR,
   SW_STENO,
-  KC_BR2,
-  // SM_FILL,
-  // SM_FILL_2,
 };
 
 const uint16_t PROGMEM sw_steno[] = {KC_DOT, KC_SLASH, COMBO_END};
-const uint16_t PROGMEM br_combo[] = {KC_B, KC_L, COMBO_END};
-const uint16_t PROGMEM br2_combo[] = {LT(2, KC_N),MT(MOD_LALT,KC_R), COMBO_END};
-// const uint16_t PROGMEM sm_fill[] = {KC_P, KC_COMMA, COMBO_END};
-// const uint16_t PROGMEM sm_fill_2[] = {KC_M, KC_C, COMBO_END};
 
 combo_t key_combos[] = {
     [SW_STENO] = COMBO_ACTION(sw_steno),
-    [KC_BR] = COMBO_ACTION(br_combo),
-    [KC_BR2] = COMBO_ACTION(br2_combo),
-    // [SM_FILL] = COMBO_ACTION(sm_fill),
-    // [SM_FILL_2] = COMBO_ACTION(sm_fill_2),
 };
 
 extern rgb_config_t rgb_matrix_config;
@@ -244,35 +218,6 @@ bool remember_last_key_user(uint16_t keycode, keyrecord_t* record, uint8_t* reme
   return true;
 }
 
-char* get_last_word(void) {
-   static char word[BUFFER_SIZE + 1] = {0};
-   int word_length = 0;
-   uint8_t index = char_buffer_index;
-
-   while (word_length < BUFFER_SIZE) {
-       index = (index - 1 + BUFFER_SIZE) % BUFFER_SIZE;
-       char c = char_buffer[index];
-
-       if (c == ' ' || c == '\n' || c == '.' || c == '/') {
-           break;
-       }
-
-       if (c != 0) {
-           word[word_length++] = c;
-       }
-   }
-
-   // Reverse the word since we read it backwards
-   for (int i = 0; i < word_length / 2; i++) {
-       char temp = word[i];
-       word[i] = word[word_length - 1 - i];
-       word[word_length - 1 - i] = temp;
-   }
-
-   word[word_length] = '\0';
-   return word;
-}
-
 // bool process_record_magic(uint16_t keycode, keyrecord_t *record) {
 //     // clang-format off
 //     switch (keycode) {
@@ -287,51 +232,6 @@ char* get_last_word(void) {
 //     return true;
 // }
 
-void send_buffer_as_string(void) {
-  //  char_buffer_index = (char_buffer_index - 1 + BUFFER_SIZE) % BUFFER_SIZE;
-  //  char_buffer[char_buffer_index] = 0;
-  //  char_buffer[(char_buffer_index + 1) % BUFFER_SIZE] = 0;
-
-   char* word = get_last_word();
-   int word_len = strlen(word);
-
-   for (int i = 0; i < word_len; i++) {
-      tap_code(KC_BSPC);
-   }
-
-  if (strcmp(word, "if") == 0) {
-    SEND_STRING("if () {\n    \n}" SS_TAP(X_UP) SS_TAP(X_UP) SS_TAP(X_RIGHT) SS_TAP(X_RIGHT) SS_TAP(X_RIGHT));
-  } else if (strcmp(word, "else") == 0) {
-    SEND_STRING("else {\n    \n}" SS_TAP(X_UP));
-  }
-
-  for (int i = 0; i < BUFFER_SIZE; i++) {
-    char_buffer[i] = 0;
-  }
-
-  char_buffer_index = 0;
-}
-
-// void send_buffer_as_string(void) {
-//     char_buffer_index = (char_buffer_index - 1 + BUFFER_SIZE) % BUFFER_SIZE;
-//     char_buffer[char_buffer_index] = 0;
-//     char temp_buffer[BUFFER_SIZE + 1] = {0};
-//     // char buffer_copy[BUFFER_SIZE];
-//     // memcpy(buffer_copy, char_buffer, BUFFER_SIZE);
-//     // uint8_t copy_index = char_buffer_index;
-//     uint8_t actual_size = 0;
-
-//     // Start from oldest entry, go to newest
-//     for (int i = 0; i < BUFFER_SIZE; i++) {
-//         int idx = (char_buffer_index - BUFFER_SIZE + i + BUFFER_SIZE) % BUFFER_SIZE;
-//         if (char_buffer[idx] != 0) {
-//             temp_buffer[actual_size++] = char_buffer[idx];
-//         }
-//     }
-//     // temp_buffer[actual_size] = '\0';
-//     SEND_STRING(temp_buffer);
-// }
-
 void process_combo_event(uint16_t combo_index, bool pressed) {
   switch(combo_index) {
     case SW_STENO:
@@ -339,59 +239,12 @@ void process_combo_event(uint16_t combo_index, bool pressed) {
       layer_invert(7);
     }
     break;
-
-    case KC_BR:
-    if (pressed) {
-      SEND_STRING("br");
-    }
-    break;
-
-    case KC_BR2:
-    if (pressed) {
-      SEND_STRING("br");
-    }
-    break;
-
-    // case SM_FILL:
-    // if (pressed) {
-    //   send_buffer_as_string();
-    // }
-    // break;
-
-    // case SM_FILL_2:
-    // if (pressed) {
-    //   send_buffer_as_string();
-    // }
-    // break;
-
   }
 }
 
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
   if (!process_achordion(keycode, record)) { return false; }
-
-  // if (record->event.pressed) {
-  //   keypress_buffer[buffer_index] = keycode;
-  //   buffer_index = (buffer_index + 1) % BUFFER_SIZE;
-
-  //   char c = pgm_read_byte(&simple_code_to_char[keycode & 0xFF]);
-  //   if (c != 0) {
-  //     char_buffer[char_buffer_index] = c;
-  //     char_buffer_index = (char_buffer_index + 1) % BUFFER_SIZE;
-  //   }
-  // }
-
-  if (record->event.pressed) {
-    keypress_buffer[buffer_index] = keycode;
-    buffer_index = (buffer_index + 1) % BUFFER_SIZE;
-
-    char c = pgm_read_byte(&simple_code_to_char[keycode & 0xFF]);
-    if (c != 0) {
-      char_buffer[char_buffer_index] = c;
-      char_buffer_index = (char_buffer_index + 1) % BUFFER_SIZE;
-    }
-  }
 
   switch (keycode) {
 
@@ -407,12 +260,6 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     //   layer_off(1);
     // }
     // return false;
-
-    case SM_FILL:
-    if (record->event.pressed) {
-      send_buffer_as_string();
-    }
-    break;
 
     case REP_SFT:
     if (record->tap.count) {
@@ -435,13 +282,6 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
       SEND_STRING(SS_LCTL("u"));
     }
     break;
-
-    // case BR:
-    // if (record->event.pressed) {
-    //   // SEND_STRING("br");
-    //   tap_code(KC_B);
-    //   tap_code(KC_R);
-    // }
 
     case QUICK_CLICK:
     if (record->event.pressed) {
