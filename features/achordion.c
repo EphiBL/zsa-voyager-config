@@ -336,11 +336,11 @@ __attribute__((weak)) bool achordion_chord(uint16_t tap_hold_keycode,
                                            uint16_t other_keycode,
                                            keyrecord_t* other_record) {
   if ((tap_hold_keycode == MT(MOD_LCTL, KC_T) ||
-      tap_hold_keycode ==  MT(MOD_LALT, KC_R)) 
-      && 
+      tap_hold_keycode ==  MT(MOD_LALT, KC_R))
+      &&
       other_keycode == KC_TAB) {
     return true;
-  } 
+  }
   if (tap_hold_keycode == OSL(1) ||
       tap_hold_keycode == LT(6,KC_SPACE) ||
       tap_hold_keycode == MT(MOD_MEH, KC_ENTER) ||
