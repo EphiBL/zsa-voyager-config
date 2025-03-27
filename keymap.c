@@ -49,7 +49,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
   // Main Keyboard
   [0] = LAYOUT_voyager(
-    KC_ESCAPE,      SCRNSHT,     KC_DEL,      KC_PC_COPY,     KC_PC_PASTE,      TG(4),                                          TG(6),     NV_SAVE,          KC_MINUS,          KC_EQL,   BL_STEP,     BL_TOGG,
+    KC_ESCAPE,      SCRNSHT,     KC_DEL,      KC_PC_COPY,     KC_PC_PASTE,      TG(4),                                          TG(6),     NV_SAVE,          KC_MINUS,          KC_EQL,   KC_MS_BTN1,     KC_MS_BTN1,
     KC_LEFT_GUI,    KC_Q,           KC_X,           KC_M,           KC_W,         KC_V,                                           KC_J,           KC_F,           KC_O,           KC_U,          KC_SCLN,     CW_TOGG,
     KC_TAB,         LT(2, KC_N),MT(MOD_LALT,KC_R),MT(MOD_LCTL, KC_T), MT(MOD_LSFT,KC_S),  KC_G,                                   KC_Y,           MT(MOD_LSFT,KC_H),MT(MOD_LCTL,KC_A),MT(MOD_LALT,KC_E),      KC_I,  KC_BSPC,
     KC_LEFT_SHIFT,  LT(3,KC_B),  KC_L,               KC_D,        KC_C,           KC_Z,                                           KC_K,           KC_P,           KC_COMMA,    KC_DOT,      KC_SLASH, KC_ENTER,
