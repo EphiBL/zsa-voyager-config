@@ -32,6 +32,7 @@ enum custom_keycodes {
   ERR_NIL,
   FMT_ERR,
   PR_ERR,
+  NV_SAVE,
 
   MG_ION,
   MG_NG,
@@ -48,10 +49,10 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
   // Main Keyboard
   [0] = LAYOUT_voyager(
-    KC_ESCAPE,      SCRNSHT,     KC_DEL,      KC_PC_COPY,     KC_PC_PASTE,      TG(4),                                          TG(6),     KC_X,          LCTL(KC_MINUS),          LCTL(KC_PLUS),   KC_X,     KC_X,
-    KC_LEFT_GUI,    KC_Q,           KC_X,           KC_M,           KC_W,         KC_V,                                           KC_J,           KC_F,           KC_O,           KC_U,          KC_SCLN,     KC_X,
+    KC_ESCAPE,      SCRNSHT,     KC_DEL,      KC_PC_COPY,     KC_PC_PASTE,      TG(4),                                          TG(6),     NV_SAVE,          KC_MINUS,          KC_EQL,   BL_STEP,     BL_TOGG,
+    KC_LEFT_GUI,    KC_Q,           KC_X,           KC_M,           KC_W,         KC_V,                                           KC_J,           KC_F,           KC_O,           KC_U,          KC_SCLN,     CW_TOGG,
     KC_TAB,         LT(2, KC_N),MT(MOD_LALT,KC_R),MT(MOD_LCTL, KC_T), MT(MOD_LSFT,KC_S),  KC_G,                                   KC_Y,           MT(MOD_LSFT,KC_H),MT(MOD_LCTL,KC_A),MT(MOD_LALT,KC_E),      KC_I,  KC_BSPC,
-    KC_LEFT_SHIFT,  LT(3,KC_B),  KC_L,               KC_D,        KC_C,           KC_Z,                                           KC_K,           KC_P,           KC_COMMA,    KC_DOT,      KC_SLASH, CW_TOGG,
+    KC_LEFT_SHIFT,  LT(3,KC_B),  KC_L,               KC_D,        KC_C,           KC_Z,                                           KC_K,           KC_P,           KC_COMMA,    KC_DOT,      KC_SLASH, KC_ENTER,
                                                     OSL(1),       OSM(MOD_LSFT),                                     MT(MOD_MEH, KC_ENTER), LT(5,KC_SPACE)
   ),
 
@@ -136,7 +137,7 @@ enum combo_events {
   SW_STENO,
 };
 
-const uint16_t PROGMEM sw_steno[] = {KC_DOT, KC_SLASH, COMBO_END};
+const uint16_t PROGMEM sw_steno[] = {KC_PLUS, KC_SLASH, COMBO_END};
 
 combo_t key_combos[] = {
     [SW_STENO] = COMBO_ACTION(sw_steno),
@@ -172,15 +173,15 @@ bool remember_last_key_user(uint16_t keycode, keyrecord_t* record, uint8_t* reme
 //     return true;
 // }
 
-void process_combo_event(uint16_t combo_index, bool pressed) {
-  switch(combo_index) {
-    case SW_STENO:
-    if (pressed) {
-      layer_invert(7);
-    }
-    break;
-  }
-}
+// void process_combo_event(uint16_t combo_index, bool pressed) {
+//   switch(combo_index) {
+//     case SW_STENO:
+//     if (pressed) {
+//       layer_invert(7);
+//     }
+//     break;
+//   }
+// }
 
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
@@ -222,6 +223,11 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
       SEND_STRING(SS_LCTL("u"));
     }
     break;
+
+    case NV_SAVE:
+    if (record->event.pressed) {
+      SEND_STRING(":wa" SS_DOWN(X_ENTER) SS_UP(X_ENTER));
+    }
 
 
     case QUICK_CLICK:

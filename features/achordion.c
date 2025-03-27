@@ -335,6 +335,7 @@ __attribute__((weak)) bool achordion_chord(uint16_t tap_hold_keycode,
                                            keyrecord_t* tap_hold_record,
                                            uint16_t other_keycode,
                                            keyrecord_t* other_record) {
+  // Special cases for specific key combinations that should always be considered held
   if ((tap_hold_keycode == MT(MOD_LCTL, KC_T) ||
       tap_hold_keycode ==  MT(MOD_LALT, KC_R))
       &&
@@ -354,7 +355,22 @@ __attribute__((weak)) bool achordion_chord(uint16_t tap_hold_keycode,
     return true;
   }
 
-  return achordion_opposite_hands(tap_hold_record, other_record);
+  // First check if keys are on opposite hands - if so, treat as hold
+  if (achordion_opposite_hands(tap_hold_record, other_record)) {
+    return true;
+  }
+  
+  // If we got here, both keys are on the same side
+  
+  // Check if both keys are on the same row (the homerow, row 3)
+  // Row numbers in the voyager are 0-indexed, with row 3 being the homerow
+  if (tap_hold_record->event.key.row == other_record->event.key.row && 
+      tap_hold_record->event.key.row == 2) { // Row 3 is index 2
+    return false; // Both on same side and same homerow - treat as tap
+  }
+  
+  // Keys are on same side but different rows - treat as hold
+  return true;
 }
 
 // By default, the timeout is 1000 ms for all keys.
