@@ -7,6 +7,7 @@
 #include "i18n.h"
 #include "features/achordion.h"
 #include "keymap_steno.h"
+#include "snip/snip.h"
 #define MOON_LED_LEVEL LED_LEVEL
 #define REP_SFT LT(1, QK_REP)
 #define AREP_SYM MT(MOD_LSFT, QK_AREP)
@@ -33,6 +34,7 @@ enum custom_keycodes {
   FMT_ERR,
   PR_ERR,
   NV_SAVE,
+  KC_SNIP,
 
   MG_ION,
   MG_NG,
@@ -49,8 +51,8 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
   // Main Keyboard
   [0] = LAYOUT_voyager(
-    KC_ESCAPE,      SCRNSHT,     KC_DEL,      KC_PC_COPY,     KC_PC_PASTE,      TG(4),                                          TG(6),     NV_SAVE,          KC_MINUS,          KC_EQL,   KC_MS_BTN1,     KC_MS_BTN1,
-    KC_LEFT_GUI,    KC_Q,           KC_X,           KC_M,           KC_W,         KC_V,                                           KC_J,           KC_F,           KC_O,           KC_U,          KC_SCLN,     CW_TOGG,
+    KC_ESCAPE,      SCRNSHT,     KC_DEL,      KC_PC_COPY,     KC_PC_PASTE,      TG(4),                                          TG(6),     NV_SAVE,          KC_MINUS,          KC_EQL,   KC_SNIP,     KC_MS_BTN1,
+    KC_LEFT_GUI,    KC_Q,           KC_X,           KC_M,       KC_W,         KC_V,                                           KC_J,           KC_F,           KC_O,           KC_U,          KC_SCLN,     CW_TOGG,
     KC_TAB,         LT(2, KC_N),MT(MOD_LALT,KC_R),MT(MOD_LCTL, KC_T), MT(MOD_LSFT,KC_S),  KC_G,                                   KC_Y,           MT(MOD_LSFT,KC_H),MT(MOD_LCTL,KC_A),MT(MOD_LALT,KC_E),      KC_I,  KC_BSPC,
     KC_LEFT_SHIFT,  LT(3,KC_B),  KC_L,               KC_D,        KC_C,           KC_Z,                                           KC_K,           KC_P,           KC_COMMA,    KC_DOT,      KC_SLASH, KC_ENTER,
                                                     OSL(1),       OSM(MOD_LSFT),                                     MT(MOD_MEH, KC_ENTER), LT(5,KC_SPACE)
@@ -135,14 +137,16 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
 enum combo_events {
   SW_STENO,
+  SNIP,
 };
 
 const uint16_t PROGMEM sw_steno[] = {KC_PLUS, KC_SLASH, COMBO_END};
+const uint16_t PROGMEM snip[] = {MT(MOD_LSFT,KC_H), MT(MOD_LCTL,KC_A), COMBO_END};
 
 combo_t key_combos[] = {
     [SW_STENO] = COMBO_ACTION(sw_steno),
+    [SNIP] = COMBO_ACTION(snip),
 };
-
 
 void matrix_scan_user(void) {
   achordion_task();
@@ -173,19 +177,25 @@ bool remember_last_key_user(uint16_t keycode, keyrecord_t* record, uint8_t* reme
 //     return true;
 // }
 
-// void process_combo_event(uint16_t combo_index, bool pressed) {
-//   switch(combo_index) {
-//     case SW_STENO:
-//     if (pressed) {
-//       layer_invert(7);
-//     }
-//     break;
-//   }
-// }
+void process_combo_event(uint16_t combo_index, bool pressed) {
+  switch(combo_index) {
+    // case SW_STENO:
+    // if (pressed) {
+    //   layer_invert(7);
+    // }
+    // break;
+       case SNIP:
+       if (pressed)
+                force_match_attempt();
+       break;
+  }
+}
 
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
   if (!process_achordion(keycode, record)) { return false; }
+
+  if (process_snippet_tool(keycode, record, KC_SNIP)) { return false; }
 
   switch (keycode) {
 
