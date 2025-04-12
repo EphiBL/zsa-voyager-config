@@ -7,7 +7,7 @@ extern "C" {
 #endif
 
 // Ring buffer configuration
-#define SNIP_BUFFER_SIZE 5 // Size of ring buffer (5-10 keypresses)
+#define SNIP_BUFFER_SIZE 6 // Size of ring buffer (5-10 keypresses)
 
 // Ring buffer structure definition
 typedef struct {

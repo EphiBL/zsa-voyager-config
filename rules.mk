@@ -1,6 +1,6 @@
 # Set any rules.mk overrides for your specific keymap here.
 # See rules at https://docs.qmk.fm/#/config_options?id=the-rulesmk-file
-CONSOLE_ENABLE = no
+# CONSOLE_ENABLE = yes
 COMMAND_ENABLE = no
 COMBO_ENABLE = yes
 MOUSEKEY_ENABLE = yes
@@ -14,9 +14,10 @@ SPACE_CADET_ENABLE = no
 CAPS_WORD_ENABLE = yes
 REPEAT_KEY_ENABLE = yes
 # AUTOCORRECT_ENABLE = yes
-DYNAMIC_MACRO_ENABLE = yes
+# DYNAMIC_MACRO_ENABLE = yes
 NKRO_ENABLE = yes
 SRC += features/achordion.c
 SRC += snip/snip.c
 SRC += snip/snippets.c
-STENO_ENABLE = yes
+# STENO_ENABLE = yes
+RAW_ENABLE = yes

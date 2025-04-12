@@ -8,6 +8,9 @@
 #include "features/achordion.h"
 #include "keymap_steno.h"
 #include "snip/snip.h"
+#include "print.h"
+#include "debug.h"
+#include "oryx.h"
 #define MOON_LED_LEVEL LED_LEVEL
 #define REP_SFT LT(1, QK_REP)
 #define AREP_SYM MT(MOD_LSFT, QK_AREP)
@@ -361,6 +364,59 @@ uint16_t get_alt_repeat_key_keycode_user(uint16_t keycode, uint8_t mods) {
     return KC_TRNS;
 }
 
+//################################################################################################################################
+// Raw HID handling for Snippet Tool
+//################################################################################################################################
+//
+
+// Custom function to handle your raw HID packets
+bool ephi_raw_hid_receive(uint8_t *data, uint8_t length) {
+    // Log the raw HID packet
+#ifdef DEBUG
+    dprintf("Ephi parser checking HID packet. Length: %d\n", length);
+    dprintf("Packet data: ");
+    for (uint8_t i = 0; i < length; i++) {
+        dprintf("0x%02X ", data[i]);
+        if ((i + 1) % 8 == 0) {
+            dprintf("\n");
+        }
+    }
+    dprintf("\n");
+#endif
+    // Handle your custom packet here
+    // Example: data[1] could be a subcommand
+    switch(data[0]) {
+        case 0x01:
+            // Process snippet tool specific command here
+            break;
+        case 0x02:
+            // Process another command
+            break;
+        default:
+            break;
+    }
+
+    // Optional: Send a response back to the host
+    uint8_t response[RAW_EPSIZE] = {0};
+    response[0] = data[1]; // Echo the subcommand
+    response[1] = 0x01;  // Status code: success
+    raw_hid_send(response, sizeof(response));
+
+    // Return true to indicate we've handled this packet
+    return true;
+
+    // Return false to indicate this packet should be processed by the Oryx handler
+    return false;
+}
+
+// The main raw_hid_receive function that QMK calls
+void raw_hid_receive(uint8_t *data, uint8_t length) {
+    // First, try to handle the packet with our custom handler
+    ephi_raw_hid_receive(data, length);
+
+    // If our handler didn't process it, pass to Oryx handler
+    // oryx_raw_hid_receive(data, length);
+}
 
 //################################################################################################################################
 // RGB Matrix
@@ -370,6 +426,13 @@ extern rgb_config_t rgb_matrix_config;
 
 void keyboard_post_init_user(void) {
   rgb_matrix_enable();
+
+  // Enable debug mode
+  // debug_enable = true;
+  // debug_matrix = true;
+
+  // Print startup message
+  // dprintf("Keyboard initialized. Raw HID logging enabled.\n");
 }
 
 const uint8_t PROGMEM ledmap[][RGB_MATRIX_LED_COUNT][3] = {

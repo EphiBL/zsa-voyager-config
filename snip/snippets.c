@@ -26,8 +26,14 @@ const snippet_entry_t snippets[] = {
     {"endl", "std::endl"},
     {"vec", "std::vector<"},
     {"str", "std::string"},
-    {"for", "for (int i = 0; i < ; i++) {"},
+    {"for", "for (int i = 0; i < ; ++i) {"},
     {"arr", "std::array<"},
+    {"strv", "std::string_view"},
+    {"strlit", "using namespace std::string_literals;"},
+    {"strvlit", "using namespace std::string_view_literals;"},
+    {"sc", "static_cast<>"},
+    {"pow", "std::pow("},
+    {"bs", "std::bitset<>"},
 };
 
 const uint8_t NUM_SNIPPETS = sizeof(snippets) / sizeof(snippets[0]);
