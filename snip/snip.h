@@ -7,7 +7,7 @@ extern "C" {
 #endif
 
 // Ring buffer configuration
-#define SNIP_BUFFER_SIZE 6 // Size of ring buffer (5-10 keypresses)
+#define SNIP_BUFFER_SIZE 7 // Size of ring buffer (5-10 keypresses)
 
 // Ring buffer structure definition
 typedef struct {
@@ -19,13 +19,13 @@ typedef struct {
 typedef struct {
     const char*   snippet_text;
     size_t        trigger_len;
-    const uint8_t end_code;
+    uint8_t       end_code;  // Removed const to allow assignment
 } snippet_match_t;
 
 typedef struct {
-    const char*   trigger;
-    const char*   snippet;
-    const uint8_t end_code;
+    const char*   trigger;  // Keep const for char pointers (they point to const data)
+    const char*   snippet;  // Keep const for char pointers
+    uint8_t       end_code; // Remove const for primitive types
 } snippet_entry_t;
 
 typedef struct {

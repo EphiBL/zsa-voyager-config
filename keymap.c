@@ -8,9 +8,11 @@
 #include "features/achordion.h"
 #include "keymap_steno.h"
 #include "snip/snip.h"
+#include "snip/snippets.h"  // Include snippets.h for snippet_collection and add_snippet
 #include "print.h"
 #include "debug.h"
 #include "oryx.h"
+#include <string.h>         // For string functions (memcpy, strcpy, etc.)
 #define MOON_LED_LEVEL LED_LEVEL
 #define REP_SFT LT(1, QK_REP)
 #define AREP_SYM MT(MOD_LSFT, QK_AREP)
@@ -370,77 +372,220 @@ uint16_t get_alt_repeat_key_keycode_user(uint16_t keycode, uint8_t mods) {
 //################################################################################################################################
 //
 
-char snippet_string[256];
+// Buffers and state for building snippets
+static char trigger_buffer[SNIP_BUFFER_SIZE] = {0};  // Use SNIP_BUFFER_SIZE from snip.h
+static char snippet_buffer[100] = {0};  // Use 100 as specified
+static uint8_t current_end_code = 0;
+static bool have_trigger = false;
+static bool have_snippet = false;
+static bool expecting_snippet = false;
 
 // Custom function to handle your raw HID packets
 bool ephi_raw_hid_receive(uint8_t *data, uint8_t length) {
     // Log the raw HID packet
-#ifdef DEBUG
-    dprintf("Ephi parser checking HID packet. Length: %d\n", length);
-    if (data[0] == 0x01) {
-        dprintf("Command packet received\n");
-    } else if (data[0] == 0x05) {
-        dprintf("Trigger packet received\n");
-            if (data[1] != 0x04)
-                dprintf("Trigger packet with SEQ != SINGLE\n");
-    } else if (data[0] == 0x06) {
-        dprintf("Snippet packet received\n");
-        switch(data[1]) {
-            case 0x01:
-                dprintf("SEQ: Start\n");
-                for (uint8_t i = 0; i < length; i++) {
-                    dprintf("0x%02X ", data[i]);
-                    if ((i + 1) % 8 == 0) {
-                        dprintf("\n");
-                    }
-                }
-                    break;
-            case 0x02:
-                dprintf("SEQ: Cont\n");
-                for (uint8_t i = 0; i < length; i++) {
-                    dprintf("0x%02X ", data[i]);
-                    if ((i + 1) % 8 == 0) {
-                        dprintf("\n");
-                    }
-                }
-                    break;
-            case 0x03:
-                dprintf("SEQ: End\n");
-                    break;
-            case 0x04:
-                dprintf("SEQ: SINGLE\n");
-                for (uint8_t i = 0; i < length; i++) {
-                    dprintf("0x%02X ", data[i]);
-                    if ((i + 1) % 8 == 0) {
-                        dprintf("\n");
-                        snippet_string[i+1] = '\0';
-                    }
-                    snippet_string[i] = (char)data[i];
-                }
-                dprintf("Snippet: %s\n", snippet_string);
-                    break;
-        }
-    } else if (data[0] == 0x07) {
-        dprintf("End-code packet received\n");
-            if (data[1] != 0x04)
-                dprintf("Trigger packet with SEQ != SINGLE\n");
-    }
-#endif
-    // Actual packet handling here, not mixed in with debug stuff above.
-    // incase you forgot, in order to start writing, we need to see a command packet first (0x01) in the first byte.
-    // Then we start building our snippet_entry_t structs, our triggers will come first and be 'Single' packets. Then the snippet packets, then the end code.
+// #ifdef DEBUG2
+//     dprintf("Ephi parser checking HID packet. Length: %d\n", length);
+//     if (data[0] == 0x01) {
+//         dprintf("Command packet received\n");
+//     } else if (data[0] == 0x05) {
+//         dprintf("Trigger packet received\n");
+//             if (data[1] != 0x04)
+//                 dprintf("Trigger packet with SEQ != SINGLE\n");
+//     } else if (data[0] == 0x06) {
+//         dprintf("Snippet packet received\n");
+//         switch(data[1]) {
+//             case 0x01:
+//                 dprintf("SEQ: Start\n");
+//                 for (uint8_t i = 0; i < length; i++) {
+//                     dprintf("0x%02X ", data[i]);
+//                     if ((i + 1) % 8 == 0) {
+//                         dprintf("\n");
+//                     }
+//                 }
+//                     break;
+//             case 0x02:
+//                 dprintf("SEQ: Cont\n");
+//                 for (uint8_t i = 0; i < length; i++) {
+//                     dprintf("0x%02X ", data[i]);
+//                     if ((i + 1) % 8 == 0) {
+//                         dprintf("\n");
+//                     }
+//                 }
+//                     break;
+//             case 0x03:
+//                 dprintf("SEQ: End\n");
+//                     break;
+//             case 0x04:
+//                 dprintf("SEQ: SINGLE\n");
+//                 for (uint8_t i = 0; i < length; i++) {
+//                     dprintf("0x%02X ", data[i]);
+//                     if ((i + 1) % 8 == 0) {
+//                         dprintf("\n");
+//                     }
+//                 }
+//                 dprintf("Snippet: %s\n", &data[2]); // Skip header bytes
+//                     break;
+//         }
+//     } else if (data[0] == 0x07) {
+//         dprintf("End-code packet received\n");
+//             if (data[1] != 0x04)
+//                 dprintf("Trigger packet with SEQ != SINGLE\n");
+//     }
+// #endif
 
-    // // Optional: Send a response back to the host
-    // uint8_t response[RAW_EPSIZE] = {0};
-    // response[0] = data[1]; // Echo the subcommand
-    // response[1] = 0x01;  // Status code: success
-    // raw_hid_send(response, sizeof(response));
+    // Actual packet handling (separate from debug)
+    // Each packet has a standard header:
+    // data[0] = packet type
+    // data[1] = sequence type (0x01=start, 0x02=continue, 0x03=end, 0x04=single)
+    // data[2+] = payload data
+
+    const uint8_t HEADER_SIZE = 2; // Skip packet type and sequence type
+    const uint8_t payload_length = length - HEADER_SIZE;
+    #ifdef DEBUG
+    dprintf("Processing packet\n");
+    #endif
+
+    switch (data[0]) {
+        case 0x01: // Command packet
+            #ifdef DEBUG
+            dprintf("Command packet received\n");
+            #endif
+            // Clear all snippets command
+            snippet_collection.snippet_count = 0;
+
+            // Reset state
+            have_trigger = false;
+            have_snippet = false;
+            expecting_snippet = false;
+            memset(trigger_buffer, 0, sizeof(trigger_buffer));
+            memset(snippet_buffer, 0, sizeof(snippet_buffer));
+
+            // Start expecting a new sequence
+            expecting_snippet = true;
+
+            #ifdef DEBUG
+            dprintf("Cleared all snippets. Ready for new snippets.\n");
+            #endif
+
+            break;
+
+        case 0x05: // Trigger packet
+            if (expecting_snippet && data[0] == 0x05) { // Single packet containing the trigger
+                memcpy(trigger_buffer, &data[HEADER_SIZE+1], payload_length);
+                trigger_buffer[payload_length] = '\0'; // Add null terminator
+                have_trigger = true;
+
+                #ifdef DEBUG
+                dprintf("Trigger captured: '%s'\n", trigger_buffer);
+                #endif
+            }
+            break;
+
+        case 0x06: // Snippet packet
+            if (expecting_snippet && have_trigger) {
+                #ifdef DEBUG
+                for (uint8_t i = 0; i < length; i++) {
+                    dprintf("0x%02X ", data[i]);
+                    if ((i + 1) % 8 == 0) {
+                        dprintf("\n");
+                    }
+                }
+                #endif
+
+                switch(data[1]) {
+                    case 0x01: // Start snippet
+                        memset(snippet_buffer, 0, sizeof(snippet_buffer));
+                        memcpy(snippet_buffer, &data[HEADER_SIZE+1], payload_length);
+                        break;
+
+                    case 0x02: // Continue snippet
+                        {
+                            size_t current_len = strlen(snippet_buffer);
+                            if (current_len + payload_length < sizeof(snippet_buffer)) {
+                                memcpy(&snippet_buffer[current_len], &data[HEADER_SIZE+1], payload_length);
+                                snippet_buffer[current_len + payload_length] = '\0';
+                            }
+                        }
+                        break;
+
+                    case 0x03: // End snippet
+                        {
+                            size_t current_len = strlen(snippet_buffer);
+                            if (current_len + payload_length < sizeof(snippet_buffer)) {
+                                memcpy(&snippet_buffer[current_len], &data[HEADER_SIZE+1], payload_length);
+                                snippet_buffer[current_len + payload_length] = '\0';
+                                have_snippet = true;
+                            }
+                        }
+                        break;
+
+                    case 0x04: // Single packet snippet
+                        memcpy(snippet_buffer, &data[HEADER_SIZE+1], payload_length);
+                        snippet_buffer[payload_length] = '\0';
+                        have_snippet = true;
+
+                        #ifdef DEBUG
+                        dprintf("Snippet captured: '%s'\n", snippet_buffer);
+                        #endif
+                        break;
+                }
+            }
+            break;
+
+        case 0x07: // End-code packet
+            if (expecting_snippet && data[1] == 0x04) {
+                current_end_code = data[3]; // The end code is in the third byte
+
+                #ifdef DEBUG
+                dprintf("End code captured: %d\n", current_end_code);
+                #endif
+
+                // If we have trigger and snippet, create the entry
+                if (have_trigger && have_snippet) {
+                    // Create a new entry using the static arrays we already have
+                    snippet_entry_t new_snippet = {
+                        .trigger = trigger_buffer,
+                        .snippet = snippet_buffer,
+                        .end_code = current_end_code
+                    };
+
+                    add_snippet(new_snippet);
+
+                    #ifdef DEBUG
+                    dprintf("Added snippet: trigger='%s', snippet='%s', end_code=%d\n",
+                           trigger_buffer, snippet_buffer, current_end_code);
+                    dprintf("Total snippets: %d\n", snippet_collection.snippet_count);
+                    #endif
+
+                    // Reset for next snippet
+                    have_trigger = false;
+                    have_snippet = false;
+                    memset(trigger_buffer, 0, sizeof(trigger_buffer));
+                    memset(snippet_buffer, 0, sizeof(snippet_buffer));
+                }
+            }
+            break;
+        case 0xFF: // End of transmission
+            {
+                // Send a response packet with byte one set to 0xFF
+                uint8_t response[32] = {0};
+                response[0] = 0xFF; // Confirm end of transmission
+                response[1] = 0x01; // Success code
+                response[2] = snippet_collection.snippet_count; // Send back total snippets count
+                raw_hid_send(response, sizeof(response));
+            }
+            break;
+
+        default:
+#ifdef DEBUG
+            dprintf("Unhandled packet type\n");
+#endif
+            // Handle any other packet types if needed
+            break;
+    }
 
     // Return true to indicate we've handled this packet
     return true;
-
-    // Return false to indicate this packet should be processed by the Oryx handler
-    return false;
 }
 
 // The main raw_hid_receive function that QMK calls

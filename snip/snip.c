@@ -150,7 +150,8 @@ static snippet_match_t match_snippet(const char* buffer) {
     SEND_STRING("Matching Snippet");
 #endif
 
-    snippet_match_t result = {NULL, 0}; // Initialize with no match
+    // Initialize the result struct
+    snippet_match_t result = {NULL, 0, 0}; // Initialize with no match
     size_t buffer_len = strlen(buffer);
 
     if (buffer_len == 0) {
@@ -170,13 +171,16 @@ static snippet_match_t match_snippet(const char* buffer) {
         // Check the dynamic snippet collection
         for (uint8_t i = 0; i < snippet_collection.snippet_count; i++) {
             if (strcmp(substr, snippet_collection.snippet_arr[i].trigger) == 0) {
-                result.snippet_text = snippet_collection.snippet_arr[i].snippet;
-                result.trigger_len = substr_len;
-                result.end_code = snippet_collection.snippet_arr[i].end_code;
+                // Create a new result with all values set at initialization
+                snippet_match_t match_result = {
+                    .snippet_text = snippet_collection.snippet_arr[i].snippet,
+                    .trigger_len = substr_len,
+                    .end_code = snippet_collection.snippet_arr[i].end_code
+                };
 #ifdef DEBUG
                 SEND_STRING("Match Found in Collection");
 #endif
-                return result;
+                return match_result;
             }
         }
     }

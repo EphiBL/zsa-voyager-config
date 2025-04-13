@@ -75,4 +75,4 @@ It will then handle the wear-leveling and writing to EEPROM.
 
 For the receiver, the first relevant packet is packet[0], because the report id is stripped by qmk before it gets to us.
 
-For building snippet_entry_t structs, we need to decode the Single trigger packets, they are utf-8 so we can just cast bytes to char. The length of the meanigful data is described by the packet as stated above. Then we progress to decoding the snippets themselves, then copy the end_code which is 2 bytes long because each end-code is actually a direct match to a qmk keycode e.g. KC_ENTER. this is why we call tap_code16(match.endcode) directly!
+For building snippet_entry_t structs, we need to decode the Single trigger packets, they are utf-8 so we can just cast bytes to char. The length of the meanigful data is described by the packet as stated above. Then we progress to decoding the snippets themselves, then copy the end_code which is 2 bytes long because each end-code is actually a direct match to a qmk keycode e.g. KC_ENTER. this is why we call tap_code16(match.endcode) directly
