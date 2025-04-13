@@ -8,7 +8,6 @@
 #include "features/achordion.h"
 #include "keymap_steno.h"
 #include "snip/snip.h"
-#include "snip/snippets.h"  // Include snippets.h for snippet_collection and add_snippet
 #include "print.h"
 #include "debug.h"
 #include "oryx.h"

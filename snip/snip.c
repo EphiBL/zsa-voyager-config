@@ -1,8 +1,25 @@
 #include "snip.h"
-#include "snippets.h"
 #include <string.h>
 
 //#define DEBUG
+
+#define MAX_SNIPPETS 50
+#define MAX_SNIPPET_LEN 100
+
+// Static storage for snippet data
+static char trigger_storage[MAX_SNIPPETS][SNIP_BUFFER_SIZE];  // Using SNIP_BUFFER_SIZE (7) from snip.h
+static char snippet_storage[MAX_SNIPPETS][MAX_SNIPPET_LEN];
+static uint8_t end_code_storage[MAX_SNIPPETS];
+
+// Array of pointers to the stored snippets
+static snippet_entry_t snippets_arr[MAX_SNIPPETS];
+
+// Collection to keep track of snippets
+snippets_collection_t snippet_collection = {
+    .snippet_arr = snippets_arr,
+    .snippet_count = 0
+};
+
 
 static snip_buffer_t key_buffer = { .head = 0, .count = 0 };
 
@@ -92,7 +109,6 @@ static char keycode_to_char(uint16_t keycode, bool shifted) {
         case KC_DOT: return shifted ? '>' : '.';
         case KC_SLSH: return shifted ? '?' : '/';
 
-        // Space and special keys
         case KC_SPC: return ' ';
         case KC_TAB: return '\t';
         case KC_ENT: return '\n';
@@ -108,15 +124,9 @@ static char keycode_to_char(uint16_t keycode, bool shifted) {
  * @note Returns a string that we can match against to see if we should print a snippet
  */
 static char* read_buffer(void) {
-#ifdef DEBUG
-        SEND_STRING("Reading Buffer");
-#endif
   if (key_buffer.count == 0) {
       buffer_string[0] = '\0';
       return buffer_string;
-#ifdef DEBUG
-        SEND_STRING("Buffer Empty");
-#endif
   }
 
   uint8_t start = 0;
@@ -132,10 +142,6 @@ static char* read_buffer(void) {
   }
 
   buffer_string[key_buffer.count] = '\0';
-
-#ifdef DEBUG
-    SEND_STRING("Buffer Read");
-#endif
   return buffer_string;
 }
 
@@ -146,19 +152,11 @@ static char* read_buffer(void) {
  * @return A snippet_match_t with the matched snippet and trigger length, or NULL snippet_text if no match
  */
 static snippet_match_t match_snippet(const char* buffer) {
-#ifdef DEBUG
-    SEND_STRING("Matching Snippet");
-#endif
-
-    // Initialize the result struct
     snippet_match_t result = {NULL, 0, 0}; // Initialize with no match
     size_t buffer_len = strlen(buffer);
 
     if (buffer_len == 0) {
         return result; // Nothing to match
-#ifdef DEBUG
-        SEND_STRING("Buffer Empty");
-#endif
     }
 
     // Start with the longest possible match (full buffer, limited to buffer size)
@@ -168,32 +166,24 @@ static snippet_match_t match_snippet(const char* buffer) {
         size_t start_pos = buffer_len - substr_len;
         const char* substr = buffer + start_pos;
 
-        // Check the dynamic snippet collection
         for (uint8_t i = 0; i < snippet_collection.snippet_count; i++) {
             if (strcmp(substr, snippet_collection.snippet_arr[i].trigger) == 0) {
-                // Create a new result with all values set at initialization
                 snippet_match_t match_result = {
                     .snippet_text = snippet_collection.snippet_arr[i].snippet,
                     .trigger_len = substr_len,
                     .end_code = snippet_collection.snippet_arr[i].end_code
                 };
-#ifdef DEBUG
-                SEND_STRING("Match Found in Collection");
-#endif
                 return match_result;
             }
         }
     }
 
-    // No match found
-#ifdef DEBUG
-    SEND_STRING("No Match Found");
-#endif
     return result;
 }
 
-/** @brief Customizable function to determine if the keycode should be recorded
- * @note Currently used to filter out characters not in the keycode map
+/**
+* @brief Customizable function to determine if the keycode should be recorded
+* @note Currently used to filter out characters not in the keycode map
 */
 bool snippet_tool_should_record(uint16_t keycode) {
     return true;
@@ -202,6 +192,7 @@ bool snippet_tool_should_record(uint16_t keycode) {
 
 /**
 * @brief May be the only way to match a snippet from a combo, still testing.
+* Is the only way to match a snippet from a combo. Is in use.
 */
 void force_match_attempt(void) {
     char *buffer = read_buffer();
@@ -219,26 +210,17 @@ void force_match_attempt(void) {
 
 /**
 * @brief Call this from process_record_user to do work on keypresses
-* @note For every keypress, if the keycode is our activation keycode, then flush
+* For every keypress, if the keycode is our activation keycode, then flush
 * the buffer and SEND_STRING the correct snippet.
 * If the keycode is not our activation keycode and is in our table, then add it
 * to the ring buffer.
 */
 bool process_snippet_tool(uint16_t keycode, keyrecord_t* record, uint16_t trigger_key) {
     if (keycode == trigger_key && record->event.pressed) {
-#ifdef DEBUG
-        SEND_STRING("Trigger Key Recognized");
-#endif
-
         char *buffer = read_buffer();
         snippet_match_t match = match_snippet(buffer);
 
         if (match.snippet_text != NULL) {
-#ifdef DEBUG
-            SEND_STRING("Match Not NULL");
-#endif
-
-            // Backspace the trigger characters
             for (size_t i = 0; i < match.trigger_len; i++) {
                 tap_code(KC_BSPC);
             }
@@ -253,15 +235,9 @@ bool process_snippet_tool(uint16_t keycode, keyrecord_t* record, uint16_t trigge
         return false;
     } else {
         if (record->event.pressed && snippet_tool_should_record(keycode)) {
-#ifdef DEBUG
-            SEND_STRING("Recording");
-#endif
             char c = keycode_to_char(keycode, is_shifted());
 
             if (c != 0) {
-#ifdef DEBUG
-                SEND_STRING("Adding Char");
-#endif
                 buffer_add_char(c);
             }
         }
@@ -269,10 +245,35 @@ bool process_snippet_tool(uint16_t keycode, keyrecord_t* record, uint16_t trigge
     }
 }
 
+
+// Add a snippet to the collection
+void add_snippet(snippet_entry_t snippet) {
+    if (snippet_collection.snippet_count < MAX_SNIPPETS) {
+        uint8_t i = snippet_collection.snippet_count;
+
+        // Copy the trigger and snippet strings to our static storage
+        strncpy(trigger_storage[i], snippet.trigger, SNIP_BUFFER_SIZE - 1);
+        trigger_storage[i][SNIP_BUFFER_SIZE - 1] = '\0';  // Ensure null termination
+
+        strncpy(snippet_storage[i], snippet.snippet, MAX_SNIPPET_LEN - 1);
+        snippet_storage[i][MAX_SNIPPET_LEN - 1] = '\0';  // Ensure null termination
+
+        // Store the end code
+        end_code_storage[i] = snippet.end_code;
+
+        // Update the pointer array
+        snippets_arr[i].trigger = trigger_storage[i];
+        snippets_arr[i].snippet = snippet_storage[i];
+        snippets_arr[i].end_code = end_code_storage[i];
+
+        // Increment the counter
+        snippet_collection.snippet_count++;
+    }
+}
+
 /**
 * @brief Call this from matrix_scan_user to do work every tick
 * @note Currently unused but may be required for checking shift states / modal sampling
 */
-void snippet_tool_task(void) {
-
-}
+// void snippet_tool_task(void) {
+// }

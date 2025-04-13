@@ -18,6 +18,5 @@ REPEAT_KEY_ENABLE = yes
 NKRO_ENABLE = yes
 SRC += features/achordion.c
 SRC += snip/snip.c
-SRC += snip/snippets.c
 # STENO_ENABLE = yes
 RAW_ENABLE = yes
