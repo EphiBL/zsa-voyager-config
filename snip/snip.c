@@ -146,17 +146,18 @@ static char* read_buffer(void) {
  * @return A snippet_match_t with the matched snippet and trigger length, or NULL snippet_text if no match
  */
 static snippet_match_t match_snippet(const char* buffer) {
-    #ifdef DEBUG
+#ifdef DEBUG
     SEND_STRING("Matching Snippet");
-    #endif
+#endif
+
     snippet_match_t result = {NULL, 0}; // Initialize with no match
     size_t buffer_len = strlen(buffer);
 
     if (buffer_len == 0) {
         return result; // Nothing to match
-        #ifdef DEBUG
+#ifdef DEBUG
         SEND_STRING("Buffer Empty");
-        #endif
+#endif
     }
 
     // Start with the longest possible match (full buffer, limited to buffer size)
@@ -166,24 +167,24 @@ static snippet_match_t match_snippet(const char* buffer) {
         size_t start_pos = buffer_len - substr_len;
         const char* substr = buffer + start_pos;
 
-        // Check all snippets against this substring
-        for (uint8_t i = 0; i < NUM_SNIPPETS; i++) {
-            if (strcmp(substr, snippets[i].trigger) == 0) {
-                // Found a match!
-                result.snippet_text = snippets[i].snippet;
+        // Check the dynamic snippet collection
+        for (uint8_t i = 0; i < snippet_collection.snippet_count; i++) {
+            if (strcmp(substr, snippet_collection.snippet_arr[i].trigger) == 0) {
+                result.snippet_text = snippet_collection.snippet_arr[i].snippet;
                 result.trigger_len = substr_len;
-                #ifdef DEBUG
-                SEND_STRING("Match Found");
-                #endif
+                result.end_code = snippet_collection.snippet_arr[i].end_code;
+#ifdef DEBUG
+                SEND_STRING("Match Found in Collection");
+#endif
                 return result;
             }
         }
     }
 
     // No match found
-    #ifdef DEBUG
+#ifdef DEBUG
     SEND_STRING("No Match Found");
-    #endif
+#endif
     return result;
 }
 
@@ -207,6 +208,7 @@ void force_match_attempt(void) {
             tap_code(KC_BSPC);
         }
         SEND_STRING(match.snippet_text);
+        tap_code16(match.end_code);
         key_buffer.count = 0;
     }
 }
@@ -220,44 +222,42 @@ void force_match_attempt(void) {
 */
 bool process_snippet_tool(uint16_t keycode, keyrecord_t* record, uint16_t trigger_key) {
     if (keycode == trigger_key && record->event.pressed) {
-
 #ifdef DEBUG
         SEND_STRING("Trigger Key Recognized");
 #endif
 
-        // Only handle on press, not release
         char *buffer = read_buffer();
         snippet_match_t match = match_snippet(buffer);
 
         if (match.snippet_text != NULL) {
-            #ifdef DEBUG
+#ifdef DEBUG
             SEND_STRING("Match Not NULL");
-            #endif
+#endif
+
             // Backspace the trigger characters
             for (size_t i = 0; i < match.trigger_len; i++) {
                 tap_code(KC_BSPC);
             }
 
-            // Send the snippet
             SEND_STRING(match.snippet_text);
+            tap_code16(match.end_code);
 
-            // Clear the buffer after sending a snippet
             key_buffer.count = 0;
 
-            return true; // Successfully handled
+            return true;
         }
         return false;
     } else {
         if (record->event.pressed && snippet_tool_should_record(keycode)) {
-            #ifdef DEBUG
+#ifdef DEBUG
             SEND_STRING("Recording");
-            #endif
+#endif
             char c = keycode_to_char(keycode, is_shifted());
 
             if (c != 0) {
-                #ifdef DEBUG
+#ifdef DEBUG
                 SEND_STRING("Adding Char");
-                #endif
+#endif
                 buffer_add_char(c);
             }
         }

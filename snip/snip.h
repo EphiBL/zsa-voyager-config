@@ -17,14 +17,21 @@ typedef struct {
 } snip_buffer_t;
 
 typedef struct {
-    const char* snippet_text;
-    size_t      trigger_len;
+    const char*   snippet_text;
+    size_t        trigger_len;
+    const uint8_t end_code;
 } snippet_match_t;
 
 typedef struct {
-    const char* trigger;
-    const char* snippet;
+    const char*   trigger;
+    const char*   snippet;
+    const uint8_t end_code;
 } snippet_entry_t;
+
+typedef struct {
+    snippet_entry_t* snippet_arr;
+    uint8_t          snippet_count;
+} snippets_collection_t;
 
 bool process_snippet_tool(uint16_t keycode, keyrecord_t* record, uint16_t trigger_key);
 

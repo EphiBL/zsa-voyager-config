@@ -1,39 +1,19 @@
 #include "snippets.h"
 
-// Example snippets here
-//
-/**
-* const snippet entry_t snippets[] = {
-  * // Single line snippets
-  * {"addr", "your.email@example.com"},
-  * // Multi-line snippets
-  * {"sig", "Best regards,\nYour Name"},
-  * // Multi-line string snippets
-  * {"lorem", "Lorem ipsum dolor sit amet,"
-  * " consectetur adipiscing elit."},
-* };
-*/
+// Array to store snippets received via raw_hid
+snippet_entry_t snippets_arr[256];
 
-/**
- * On some systems you may have to swap @ to \" and vice versa symbols
-    */
-const snippet_entry_t snippets[] = {
-    {"email", "rj_aguirre94\"outlook.com"},
-    {"st", "std::"},
-    {"con", "constexpr"},
-    {"cout", "std::cout << "},
-    {"cin", "std::cin >> "},
-    {"endl", "std::endl"},
-    {"vec", "std::vector<"},
-    {"str", "std::string"},
-    {"for", "for (int i = 0; i < ; ++i) {"},
-    {"arr", "std::array<"},
-    {"strv", "std::string_view"},
-    {"strlit", "using namespace std::string_literals;"},
-    {"strvlit", "using namespace std::string_view_literals;"},
-    {"sc", "static_cast<>"},
-    {"pow", "std::pow("},
-    {"bs", "std::bitset<>"},
+// Collection to keep track of snippets
+snippets_collection_t snippet_collection = {
+    .snippet_arr = snippets_arr,
+    .snippet_count = 0
 };
 
-const uint8_t NUM_SNIPPETS = sizeof(snippets) / sizeof(snippets[0]);
+// Add a snippet to the collection
+void add_snippet(snippet_entry_t snippet) {
+    if (snippet_collection.snippet_count < 256) {
+        uint8_t i = snippet_collection.snippet_count;
+        snippet_collection.snippet_arr[i] = snippet;
+        snippet_collection.snippet_count++;
+    }
+}

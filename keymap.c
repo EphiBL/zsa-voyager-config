@@ -426,18 +426,9 @@ bool ephi_raw_hid_receive(uint8_t *data, uint8_t length) {
                 dprintf("Trigger packet with SEQ != SINGLE\n");
     }
 #endif
-    // Handle your custom packet here
-    // Example: data[1] could be a subcommand
-    // switch(data[0]) {
-    //     case 0x01:
-    //         // Process snippet tool specific command here
-    //         break;
-    //     case 0x02:
-    //         // Process another command
-    //         break;
-    //     default:
-    //         break;
-    // }
+    // Actual packet handling here, not mixed in with debug stuff above.
+    // incase you forgot, in order to start writing, we need to see a command packet first (0x01) in the first byte.
+    // Then we start building our snippet_entry_t structs, our triggers will come first and be 'Single' packets. Then the snippet packets, then the end code.
 
     // // Optional: Send a response back to the host
     // uint8_t response[RAW_EPSIZE] = {0};
