@@ -18,6 +18,7 @@
 // #define RGB_WHITE 255, 255, 255
 // #define RGB_SOFT_DARK_GREEN 0, 100, 50 // Adjust these values to get the exact shade you want
 #define BUFFER_SIZE 10
+#define DEBUG
 
 enum custom_keycodes {
   RGB_SLD = ML_SAFE_RANGE,
@@ -369,38 +370,80 @@ uint16_t get_alt_repeat_key_keycode_user(uint16_t keycode, uint8_t mods) {
 //################################################################################################################################
 //
 
+char snippet_string[256];
+
 // Custom function to handle your raw HID packets
 bool ephi_raw_hid_receive(uint8_t *data, uint8_t length) {
     // Log the raw HID packet
 #ifdef DEBUG
     dprintf("Ephi parser checking HID packet. Length: %d\n", length);
-    dprintf("Packet data: ");
-    for (uint8_t i = 0; i < length; i++) {
-        dprintf("0x%02X ", data[i]);
-        if ((i + 1) % 8 == 0) {
-            dprintf("\n");
+    if (data[0] == 0x01) {
+        dprintf("Command packet received\n");
+    } else if (data[0] == 0x05) {
+        dprintf("Trigger packet received\n");
+            if (data[1] != 0x04)
+                dprintf("Trigger packet with SEQ != SINGLE\n");
+    } else if (data[0] == 0x06) {
+        dprintf("Snippet packet received\n");
+        switch(data[1]) {
+            case 0x01:
+                dprintf("SEQ: Start\n");
+                for (uint8_t i = 0; i < length; i++) {
+                    dprintf("0x%02X ", data[i]);
+                    if ((i + 1) % 8 == 0) {
+                        dprintf("\n");
+                    }
+                }
+                    break;
+            case 0x02:
+                dprintf("SEQ: Cont\n");
+                for (uint8_t i = 0; i < length; i++) {
+                    dprintf("0x%02X ", data[i]);
+                    if ((i + 1) % 8 == 0) {
+                        dprintf("\n");
+                    }
+                }
+                    break;
+            case 0x03:
+                dprintf("SEQ: End\n");
+                    break;
+            case 0x04:
+                dprintf("SEQ: SINGLE\n");
+                for (uint8_t i = 0; i < length; i++) {
+                    dprintf("0x%02X ", data[i]);
+                    if ((i + 1) % 8 == 0) {
+                        dprintf("\n");
+                        snippet_string[i+1] = '\0';
+                    }
+                    snippet_string[i] = (char)data[i];
+                }
+                dprintf("Snippet: %s\n", snippet_string);
+                    break;
         }
+    } else if (data[0] == 0x07) {
+        dprintf("End-code packet received\n");
+            if (data[1] != 0x04)
+                dprintf("Trigger packet with SEQ != SINGLE\n");
     }
-    dprintf("\n");
 #endif
     // Handle your custom packet here
     // Example: data[1] could be a subcommand
-    switch(data[0]) {
-        case 0x01:
-            // Process snippet tool specific command here
-            break;
-        case 0x02:
-            // Process another command
-            break;
-        default:
-            break;
-    }
+    // switch(data[0]) {
+    //     case 0x01:
+    //         // Process snippet tool specific command here
+    //         break;
+    //     case 0x02:
+    //         // Process another command
+    //         break;
+    //     default:
+    //         break;
+    // }
 
-    // Optional: Send a response back to the host
-    uint8_t response[RAW_EPSIZE] = {0};
-    response[0] = data[1]; // Echo the subcommand
-    response[1] = 0x01;  // Status code: success
-    raw_hid_send(response, sizeof(response));
+    // // Optional: Send a response back to the host
+    // uint8_t response[RAW_EPSIZE] = {0};
+    // response[0] = data[1]; // Echo the subcommand
+    // response[1] = 0x01;  // Status code: success
+    // raw_hid_send(response, sizeof(response));
 
     // Return true to indicate we've handled this packet
     return true;
@@ -428,11 +471,11 @@ void keyboard_post_init_user(void) {
   rgb_matrix_enable();
 
   // Enable debug mode
-  // debug_enable = true;
-  // debug_matrix = true;
+  debug_enable = true;
+//  debug_matrix = true;
 
   // Print startup message
-  // dprintf("Keyboard initialized. Raw HID logging enabled.\n");
+  dprintf("Keyboard initialized. Raw HID logging enabled.\n");
 }
 
 const uint8_t PROGMEM ledmap[][RGB_MATRIX_LED_COUNT][3] = {
