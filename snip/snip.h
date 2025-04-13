@@ -21,16 +21,18 @@ typedef struct {
 } snippet_match_t;
 
 typedef struct {
-    const char* trigger;
-    const char* snippet;
-    uint8_t     end_code;
+    char    trigger[SNIP_BUFFER_SIZE];
+    char    snippet[100]; // Using fixed size for flat storage
+    uint8_t end_code;
 } snippet_entry_t;
 
+// This is the typedef
 typedef struct {
-    snippet_entry_t* snippet_arr;
-    uint8_t          snippet_count;
+    snippet_entry_t snippet_arr[50]; // Hard-coding max size for flat storage
+    uint8_t         snippet_count;
 } snippets_collection_t;
 
+// This is the actual collection of the type
 extern snippets_collection_t snippet_collection;
 
 bool process_snippet_tool(uint16_t keycode, keyrecord_t* record, uint16_t trigger_key);

@@ -381,57 +381,6 @@ static bool expecting_snippet = false;
 
 // Custom function to handle your raw HID packets
 bool ephi_raw_hid_receive(uint8_t *data, uint8_t length) {
-    // Log the raw HID packet
-// #ifdef DEBUG2
-//     dprintf("Ephi parser checking HID packet. Length: %d\n", length);
-//     if (data[0] == 0x01) {
-//         dprintf("Command packet received\n");
-//     } else if (data[0] == 0x05) {
-//         dprintf("Trigger packet received\n");
-//             if (data[1] != 0x04)
-//                 dprintf("Trigger packet with SEQ != SINGLE\n");
-//     } else if (data[0] == 0x06) {
-//         dprintf("Snippet packet received\n");
-//         switch(data[1]) {
-//             case 0x01:
-//                 dprintf("SEQ: Start\n");
-//                 for (uint8_t i = 0; i < length; i++) {
-//                     dprintf("0x%02X ", data[i]);
-//                     if ((i + 1) % 8 == 0) {
-//                         dprintf("\n");
-//                     }
-//                 }
-//                     break;
-//             case 0x02:
-//                 dprintf("SEQ: Cont\n");
-//                 for (uint8_t i = 0; i < length; i++) {
-//                     dprintf("0x%02X ", data[i]);
-//                     if ((i + 1) % 8 == 0) {
-//                         dprintf("\n");
-//                     }
-//                 }
-//                     break;
-//             case 0x03:
-//                 dprintf("SEQ: End\n");
-//                     break;
-//             case 0x04:
-//                 dprintf("SEQ: SINGLE\n");
-//                 for (uint8_t i = 0; i < length; i++) {
-//                     dprintf("0x%02X ", data[i]);
-//                     if ((i + 1) % 8 == 0) {
-//                         dprintf("\n");
-//                     }
-//                 }
-//                 dprintf("Snippet: %s\n", &data[2]); // Skip header bytes
-//                     break;
-//         }
-//     } else if (data[0] == 0x07) {
-//         dprintf("End-code packet received\n");
-//             if (data[1] != 0x04)
-//                 dprintf("Trigger packet with SEQ != SINGLE\n");
-//     }
-// #endif
-
     // Actual packet handling (separate from debug)
     // Each packet has a standard header:
     // data[0] = packet type
@@ -462,9 +411,9 @@ bool ephi_raw_hid_receive(uint8_t *data, uint8_t length) {
             // Start expecting a new sequence
             expecting_snippet = true;
 
-            #ifdef DEBUG
+#ifdef DEBUG
             dprintf("Cleared all snippets. Ready for new snippets.\n");
-            #endif
+#endif
 
             break;
 
@@ -474,23 +423,14 @@ bool ephi_raw_hid_receive(uint8_t *data, uint8_t length) {
                 trigger_buffer[payload_length] = '\0'; // Add null terminator
                 have_trigger = true;
 
-                #ifdef DEBUG
+#ifdef DEBUG
                 dprintf("Trigger captured: '%s'\n", trigger_buffer);
-                #endif
+#endif
             }
             break;
 
         case 0x06: // Snippet packet
             if (expecting_snippet && have_trigger) {
-                #ifdef DEBUG
-                for (uint8_t i = 0; i < length; i++) {
-                    dprintf("0x%02X ", data[i]);
-                    if ((i + 1) % 8 == 0) {
-                        dprintf("\n");
-                    }
-                }
-                #endif
-
                 switch(data[1]) {
                     case 0x01: // Start snippet
                         memset(snippet_buffer, 0, sizeof(snippet_buffer));
@@ -523,9 +463,6 @@ bool ephi_raw_hid_receive(uint8_t *data, uint8_t length) {
                         snippet_buffer[payload_length] = '\0';
                         have_snippet = true;
 
-                        #ifdef DEBUG
-                        dprintf("Snippet captured: '%s'\n", snippet_buffer);
-                        #endif
                         break;
                 }
             }
@@ -535,26 +472,24 @@ bool ephi_raw_hid_receive(uint8_t *data, uint8_t length) {
             if (expecting_snippet && data[1] == 0x04) {
                 current_end_code = data[3]; // The end code is in the third byte
 
-                #ifdef DEBUG
+#ifdef DEBUG
                 dprintf("End code captured: %d\n", current_end_code);
-                #endif
-
-                // If we have trigger and snippet, create the entry
+#endif
                 if (have_trigger && have_snippet) {
-                    // Create a new entry using the static arrays we already have
-                    snippet_entry_t new_snippet = {
-                        .trigger = trigger_buffer,
-                        .snippet = snippet_buffer,
-                        .end_code = current_end_code
-                    };
+                    snippet_entry_t new_snippet;
+                    strncpy(new_snippet.trigger, trigger_buffer, SNIP_BUFFER_SIZE - 1);
+                    new_snippet.trigger[SNIP_BUFFER_SIZE - 1] = '\0';
+                    strncpy(new_snippet.snippet, snippet_buffer, 99);
+                    new_snippet.snippet[99] = '\0';
+                    new_snippet.end_code = current_end_code;
 
                     add_snippet(new_snippet);
 
-                    #ifdef DEBUG
+#ifdef DEBUG
                     dprintf("Added snippet: trigger='%s', snippet='%s', end_code=%d\n",
                            trigger_buffer, snippet_buffer, current_end_code);
                     dprintf("Total snippets: %d\n", snippet_collection.snippet_count);
-                    #endif
+#endif
 
                     // Reset for next snippet
                     have_trigger = false;
@@ -583,13 +518,11 @@ bool ephi_raw_hid_receive(uint8_t *data, uint8_t length) {
             break;
     }
 
-    // Return true to indicate we've handled this packet
-    return true;
+    return true; // Indicates we've handled the packet and can skip the Oryx handler
 }
 
 // The main raw_hid_receive function that QMK calls
 void raw_hid_receive(uint8_t *data, uint8_t length) {
-    // First, try to handle the packet with our custom handler
     ephi_raw_hid_receive(data, length);
 
     // If our handler didn't process it, pass to Oryx handler
