@@ -22,13 +22,13 @@ typedef struct {
 
 typedef struct {
     char    trigger[SNIP_BUFFER_SIZE];
-    char    snippet[100]; // Using fixed size for flat storage
+    char    snippet[80]; // Using fixed size for flat storage
     uint8_t end_code;
 } snippet_entry_t;
 
 // This is the typedef
 typedef struct {
-    snippet_entry_t snippet_arr[50]; // Hard-coding max size for flat storage
+    snippet_entry_t snippet_arr[40]; // Hard-coding max size for flat storage
     uint8_t         snippet_count;
 } snippets_collection_t;
 

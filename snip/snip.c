@@ -3,8 +3,8 @@
 
 //#define DEBUG
 
-#define MAX_SNIPPETS 50
-#define MAX_SNIPPET_LEN 100
+#define MAX_SNIPPETS 40
+#define MAX_SNIPPET_LEN 80
 
 // Collection to keep track of snippets - now using flat storage
 snippets_collection_t snippet_collection = {

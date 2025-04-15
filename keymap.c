@@ -378,6 +378,7 @@ static uint8_t current_end_code = 0;
 static bool have_trigger = false;
 static bool have_snippet = false;
 static bool expecting_snippet = false;
+static bool writeToEEPROM = false;
 
 // Custom function to handle your raw HID packets
 bool ephi_raw_hid_receive(uint8_t *data, uint8_t length) {
@@ -388,15 +389,22 @@ bool ephi_raw_hid_receive(uint8_t *data, uint8_t length) {
     // data[2+] = payload data
 
     const uint8_t HEADER_SIZE = 2; // Skip packet type and sequence type
-    const uint8_t payload_length = length - HEADER_SIZE;
+    uint8_t payload_length = length - HEADER_SIZE;
     #ifdef DEBUG
     dprintf("Processing packet\n");
+  // dump packet formatted as hex
+  for (int i = 0; i < length; i++) {
+    dprintf("%02x ", data[i]);
+    if (i % 16 == 15) {
+      dprintf("\n");
+    }
+  }
     #endif
 
     switch (data[0]) {
-        case 0x01: // Command packet
+        case 0x01: // Command packet - RAM storage
             #ifdef DEBUG
-            dprintf("Command packet received\n");
+            dprintf("Command packet received for RAM storage\n");
             #endif
             // Clear all snippets command
             snippet_collection.snippet_count = 0;
@@ -405,6 +413,7 @@ bool ephi_raw_hid_receive(uint8_t *data, uint8_t length) {
             have_trigger = false;
             have_snippet = false;
             expecting_snippet = false;
+            writeToEEPROM = false;
             memset(trigger_buffer, 0, sizeof(trigger_buffer));
             memset(snippet_buffer, 0, sizeof(snippet_buffer));
 
@@ -412,20 +421,61 @@ bool ephi_raw_hid_receive(uint8_t *data, uint8_t length) {
             expecting_snippet = true;
 
 #ifdef DEBUG
-            dprintf("Cleared all snippets. Ready for new snippets.\n");
+            dprintf("Cleared all snippets. Ready for new snippets (RAM storage).\n");
 #endif
+            break;
 
+        case 0x02: // Command packet - Write to EEPROM
+            #ifdef DEBUG
+            dprintf("Command packet received for EEPROM storage\n");
+            #endif
+          // Send a response packet with byte one set to 0xFF
+            uint8_t response[32] = {0};
+            response[0] = 0xFF; // Confirm end of transmission
+            response[1] = 0x01; // Success code
+            response[2] = snippet_collection.snippet_count; // Send back total snippets count
+            response[3] = 0x55; // Magic test number
+
+            #ifdef DEBUG
+            dprintf("Writing %d snippets to EEPROM user data...\n", snippet_collection.snippet_count);
+            #endif
+
+            if (sizeof(snippets_collection_t) <= EECONFIG_USER_DATA_SIZE) {
+                eeconfig_update_user_datablock(&snippet_collection);
+            //
+            //     #ifdef DEBUG
+            //     dprintf("EEPROM write complete, %d bytes written\n", (int)sizeof(snippets_collection_t));
+            //     #endif
+            //
+                // Success code
+                response[1] = 0x02;
+            }
+
+                #ifdef DEBUG
+                dprintf("ERROR: Snippet collection too large for EEPROM: %d > %d\n",
+                       (int)sizeof(snippets_collection_t), EECONFIG_USER_DATA_SIZE);
+                #endif
+
+                // // Error code for size issues
+                // response[1] = 0xFF;
+
+                raw_hid_send(response, sizeof(response));
             break;
 
         case 0x05: // Trigger packet
-            if (expecting_snippet && data[0] == 0x05) { // Single packet containing the trigger
+            if (expecting_snippet) {
+                // Safety check to ensure we don't overflow buffer
+                if (payload_length > SNIP_BUFFER_SIZE-1) {
+                    payload_length = SNIP_BUFFER_SIZE-1;
+                }
+
                 memcpy(trigger_buffer, &data[HEADER_SIZE+1], payload_length);
                 trigger_buffer[payload_length] = '\0'; // Add null terminator
                 have_trigger = true;
 
-#ifdef DEBUG
+                #ifdef DEBUG
                 dprintf("Trigger captured: '%s'\n", trigger_buffer);
-#endif
+                #endif
             }
             break;
 
@@ -434,13 +484,34 @@ bool ephi_raw_hid_receive(uint8_t *data, uint8_t length) {
                 switch(data[1]) {
                     case 0x01: // Start snippet
                         memset(snippet_buffer, 0, sizeof(snippet_buffer));
+
+                        // Safety check to avoid overflow
+                        if (payload_length >= sizeof(snippet_buffer)) {
+                            #ifdef DEBUG
+                            dprintf("WARNING: Snippet too long, truncating %d to %d\n",
+                                   payload_length, (int)sizeof(snippet_buffer)-1);
+                            #endif
+                            payload_length = sizeof(snippet_buffer) - 1;
+                        }
+
                         memcpy(snippet_buffer, &data[HEADER_SIZE+1], payload_length);
+                        snippet_buffer[payload_length] = '\0';
                         break;
 
                     case 0x02: // Continue snippet
                         {
                             size_t current_len = strlen(snippet_buffer);
-                            if (current_len + payload_length < sizeof(snippet_buffer)) {
+                            size_t remaining = sizeof(snippet_buffer) - current_len - 1;
+
+                            if (payload_length > remaining) {
+                                #ifdef DEBUG
+                                dprintf("WARNING: Snippet continuation too long, truncating %d to %d\n",
+                                       payload_length, (int)remaining);
+                                #endif
+                                payload_length = remaining;
+                            }
+
+                            if (payload_length > 0) {
                                 memcpy(&snippet_buffer[current_len], &data[HEADER_SIZE+1], payload_length);
                                 snippet_buffer[current_len + payload_length] = '\0';
                             }
@@ -450,19 +521,46 @@ bool ephi_raw_hid_receive(uint8_t *data, uint8_t length) {
                     case 0x03: // End snippet
                         {
                             size_t current_len = strlen(snippet_buffer);
-                            if (current_len + payload_length < sizeof(snippet_buffer)) {
+                            size_t remaining = sizeof(snippet_buffer) - current_len - 1;
+
+                            if (payload_length > remaining) {
+                                #ifdef DEBUG
+                                dprintf("WARNING: Snippet end too long, truncating %d to %d\n",
+                                       payload_length, (int)remaining);
+                                #endif
+                                payload_length = remaining;
+                            }
+
+                            if (payload_length > 0) {
                                 memcpy(&snippet_buffer[current_len], &data[HEADER_SIZE+1], payload_length);
                                 snippet_buffer[current_len + payload_length] = '\0';
-                                have_snippet = true;
                             }
+
+                            have_snippet = true;
+
+                            #ifdef DEBUG
+                            dprintf("Completed snippet: '%s'\n", snippet_buffer);
+                            #endif
                         }
                         break;
 
                     case 0x04: // Single packet snippet
+                        // Safety check to avoid overflow
+                        if (payload_length >= sizeof(snippet_buffer)) {
+                            #ifdef DEBUG
+                            dprintf("WARNING: Single snippet too long, truncating %d to %d\n",
+                                   payload_length, (int)sizeof(snippet_buffer)-1);
+                            #endif
+                            payload_length = sizeof(snippet_buffer) - 1;
+                        }
+
                         memcpy(snippet_buffer, &data[HEADER_SIZE+1], payload_length);
                         snippet_buffer[payload_length] = '\0';
                         have_snippet = true;
 
+                        #ifdef DEBUG
+                        dprintf("Single packet snippet: '%s'\n", snippet_buffer);
+                        #endif
                         break;
                 }
             }
@@ -476,20 +574,27 @@ bool ephi_raw_hid_receive(uint8_t *data, uint8_t length) {
                 dprintf("End code captured: %d\n", current_end_code);
 #endif
                 if (have_trigger && have_snippet) {
-                    snippet_entry_t new_snippet;
-                    strncpy(new_snippet.trigger, trigger_buffer, SNIP_BUFFER_SIZE - 1);
-                    new_snippet.trigger[SNIP_BUFFER_SIZE - 1] = '\0';
-                    strncpy(new_snippet.snippet, snippet_buffer, 99);
-                    new_snippet.snippet[99] = '\0';
-                    new_snippet.end_code = current_end_code;
+                    // Check if we have room for one more snippet
+                    if (snippet_collection.snippet_count < 40) {
+                        snippet_entry_t new_snippet;
+                        strncpy(new_snippet.trigger, trigger_buffer, SNIP_BUFFER_SIZE - 1);
+                        new_snippet.trigger[SNIP_BUFFER_SIZE - 1] = '\0';
+                        strncpy(new_snippet.snippet, snippet_buffer, 79);
+                        new_snippet.snippet[79] = '\0';
+                        new_snippet.end_code = current_end_code;
 
-                    add_snippet(new_snippet);
+                        add_snippet(new_snippet);
 
-#ifdef DEBUG
-                    dprintf("Added snippet: trigger='%s', snippet='%s', end_code=%d\n",
-                           trigger_buffer, snippet_buffer, current_end_code);
-                    dprintf("Total snippets: %d\n", snippet_collection.snippet_count);
-#endif
+                        #ifdef DEBUG
+                        dprintf("Added snippet: trigger='%s', snippet='%s', end_code=%d\n",
+                              trigger_buffer, snippet_buffer, current_end_code);
+                        dprintf("Total snippets: %d\n", snippet_collection.snippet_count);
+                        #endif
+                    } else {
+                        #ifdef DEBUG
+                        dprintf("ERROR: Maximum snippet count reached (50), cannot add more\n");
+                        #endif
+                    }
 
                     // Reset for next snippet
                     have_trigger = false;
@@ -499,13 +604,15 @@ bool ephi_raw_hid_receive(uint8_t *data, uint8_t length) {
                 }
             }
             break;
-        case 0xFF: // End of transmission
+        case 0x11: // End of transmission
             {
                 // Send a response packet with byte one set to 0xFF
                 uint8_t response[32] = {0};
                 response[0] = 0xFF; // Confirm end of transmission
                 response[1] = 0x01; // Success code
                 response[2] = snippet_collection.snippet_count; // Send back total snippets count
+                response[3] = 0x55; // Magic test number
+
                 raw_hid_send(response, sizeof(response));
             }
             break;
@@ -541,6 +648,49 @@ void keyboard_post_init_user(void) {
   // Enable debug mode
   debug_enable = true;
 //  debug_matrix = true;
+  eeconfig_init_user();
+
+  // Print some debug info about EEPROM and data sizes
+  #ifdef DEBUG
+  dprintf("EEPROM info: USER_DATA_SIZE=%d, Collection size=%d bytes\n",
+          EECONFIG_USER_DATA_SIZE, (int)sizeof(snippets_collection_t));
+  dprintf("-----------------------------------\n");
+  #endif
+
+  // Load snippets from EEPROM if available
+  // if (eeconfig_is_enabled() && eeconfig_is_user_datablock_valid()) {
+  //   // Make sure our collection size isn't too large for the defined user data size
+  //   if (sizeof(snippets_collection_t) <= EECONFIG_USER_DATA_SIZE) {
+  //     // Use the proper QMK function to read user data block
+  //     eeconfig_read_user_datablock(&snippet_collection);
+  //
+  //     // Safety check - ensure the collection count is valid
+  //     if (snippet_collection.snippet_count > 50) {
+  //       snippet_collection.snippet_count = 0;
+  //       #ifdef DEBUG
+  //       dprintf("WARNING: Invalid snippet count in EEPROM, resetting to 0\n");
+  //       #endif
+  //     } else {
+  //       #ifdef DEBUG
+  //       dprintf("Loaded %d snippets from EEPROM (%d bytes)\n",
+  //               snippet_collection.snippet_count, (int)sizeof(snippets_collection_t));
+  //       #endif
+  //     }
+  //   } else {
+  //     #ifdef DEBUG
+  //     dprintf("ERROR: Snippet collection too large for EEPROM: %d > %d\n",
+  //            (int)sizeof(snippets_collection_t), EECONFIG_USER_DATA_SIZE);
+  //     #endif
+  //     snippet_collection.snippet_count = 0;
+  //   }
+  // } else {
+  //   #ifdef DEBUG
+  //   dprintf("No valid snippets found in EEPROM\n");
+  //   #endif
+  //
+  //   // Initialize with empty collection
+  //   snippet_collection.snippet_count = 0;
+  // }
 
   // Print startup message
   dprintf("Keyboard initialized. Raw HID logging enabled.\n");
