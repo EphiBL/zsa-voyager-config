@@ -329,6 +329,8 @@ bool achordion_opposite_hands(const keyrecord_t* tap_hold_record,
          on_left_hand(other_record->event.key);
 }
 
+// TODO: outdated since switching to homerow defines, also claude code broke it anyway
+//
 // By default, use the BILATERAL_COMBINATIONS rule to consider the tap-hold key
 // "held" only when it and the other key are on opposite hands.
 __attribute__((weak)) bool achordion_chord(uint16_t tap_hold_keycode,
@@ -359,16 +361,16 @@ __attribute__((weak)) bool achordion_chord(uint16_t tap_hold_keycode,
   if (achordion_opposite_hands(tap_hold_record, other_record)) {
     return true;
   }
-  
+
   // If we got here, both keys are on the same side
-  
+
   // Check if both keys are on the same row (the homerow, row 3)
   // Row numbers in the voyager are 0-indexed, with row 3 being the homerow
-  if (tap_hold_record->event.key.row == other_record->event.key.row && 
+  if (tap_hold_record->event.key.row == other_record->event.key.row &&
       tap_hold_record->event.key.row == 2) { // Row 3 is index 2
     return false; // Both on same side and same homerow - treat as tap
   }
-  
+
   // Keys are on same side but different rows - treat as hold
   return true;
 }
