@@ -50,8 +50,8 @@ enum custom_keycodes {
 
 #define L_HR_1 LT(2, KC_N)
 #define L_HR_2 MT(MOD_LALT, KC_R)
-#define L_HR_3 MT(MOD_LCTL, KC_T)
-#define L_HR_4 MT(MOD_LSFT, KC_S)
+#define L_HR_3 KC_T
+#define L_HR_4 KC_S
 #define R_HR_1 KC_H
 #define R_HR_2 KC_A
 #define R_HR_3 KC_E
@@ -65,11 +65,11 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
   // Main Keyboard
   [0] = LAYOUT_voyager(
-    KC_ESCAPE,      SCRNSHT,     KC_DEL,      KC_PC_COPY,     KC_PC_PASTE,      TG(4),                                          TG(6),     NV_SAVE,          KC_MINUS,          KC_EQL,      KC_SNIP,     KC_MS_BTN1,
-    KC_LEFT_GUI,    KC_Q,        KC_X,        KC_M,           KC_W,             KC_V,                                           KC_J,           KC_F,           KC_O,           KC_U,        KC_SCLN,     CW_TOGG,
-    KC_TAB,         L_HR_1,      L_HR_2,      L_HR_3,         L_HR_4,           KC_G,                                           KC_Y,           R_HR_1,      R_HR_2,            R_HR_3,      R_HR_4,  KC_BSPC,
+    KC_ESCAPE,      SCRNSHT,     KC_DEL,      KC_PC_COPY,     KC_PC_PASTE,      TG(4),                                          KC_F13,     KC_F14,          KC_MINUS,          KC_EQL,      KC_F15,     KC_F16,
+    KC_TAB,    KC_Q,        KC_X,        KC_M,           KC_W,             KC_V,                                           KC_J,           KC_F,           KC_O,           KC_U,        KC_SCLN,     CW_TOGG,
+    KC_LEFT_GUI,         L_HR_1,      L_HR_2,      L_HR_3,         L_HR_4,           KC_G,                                           KC_Y,           R_HR_1,      R_HR_2,            R_HR_3,      R_HR_4,  KC_BSPC,
     KC_LEFT_SHIFT,  LT(3,KC_B),  KC_L,               KC_D,        KC_C,           KC_Z,                                         KC_K,           KC_P,           KC_COMMA,    KC_DOT,      KC_SLASH, KC_ENTER,
-                                                    OSL(1),       OSM(MOD_LSFT),                                     MT(MOD_MEH, KC_ENTER), LT(5,KC_SPACE)
+                                                    OSL(1),       OSM(MOD_LSFT),                                     MT(MOD_LCTL, KC_ENTER), LT(5,KC_SPACE)
   ),
 
   // Symbols
