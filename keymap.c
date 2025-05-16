@@ -67,9 +67,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   [0] = LAYOUT_voyager(
     KC_ESCAPE,      SCRNSHT,     KC_DEL,      KC_PC_COPY,     KC_PC_PASTE,      TG(4),                                          KC_F13,     KC_F14,          KC_MINUS,          KC_EQL,      KC_F15,     KC_F16,
     KC_TAB,    KC_Q,        KC_X,        KC_M,           KC_W,             KC_V,                                           KC_J,           KC_F,           KC_O,           KC_U,        KC_SCLN,     CW_TOGG,
-    KC_LEFT_GUI,         L_HR_1,      L_HR_2,      L_HR_3,         L_HR_4,           KC_G,                                           KC_Y,           R_HR_1,      R_HR_2,            R_HR_3,      R_HR_4,  KC_BSPC,
-    KC_LEFT_SHIFT,  LT(3,KC_B),  KC_L,               KC_D,        KC_C,           KC_Z,                                         KC_K,           KC_P,           KC_COMMA,    KC_DOT,      KC_SLASH, KC_ENTER,
-                                                    OSL(1),       OSM(MOD_LSFT),                                     MT(MOD_LCTL, KC_ENTER), LT(5,KC_SPACE)
+    KC_LEFT_CTRL,         L_HR_1,      L_HR_2,      L_HR_3,         L_HR_4,           KC_G,                                           KC_Y,           R_HR_1,      R_HR_2,            R_HR_3,      R_HR_4,  KC_BSPC,
+    KC_LEFT_SHIFT,  LT(3,KC_B),  KC_L,               KC_D,        KC_C,           KC_Z,                                         KC_K,           KC_P,           KC_COMMA,    KC_DOT,      KC_SLASH, MOD_MEH,
+                                                    OSL(1),       OSM(MOD_LSFT),                                     MT(MOD_LEFT_GUI, KC_ENTER), LT(5,KC_SPACE)
   ),
 
   // Symbols
